@@ -61,7 +61,7 @@ Along with the JSON, politely confirm to the user that you are sending the reque
           'X-Title': 'Smartry Kiosk',
         },
         body: JSON.stringify({
-          model: 'meta-llama/llama-3-8b-instruct:free',
+          model: 'openrouter/free',
           messages: [systemPrompt, ...newMessages],
         })
       });

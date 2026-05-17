@@ -48,6 +48,7 @@ export default function App() {
 
   // Auth handler
   const handleAuth = async () => {
+    if (loading) return;
     if (!emailInput.trim() || !passwordInput.trim()) return;
     setLoading(true);
     try {
