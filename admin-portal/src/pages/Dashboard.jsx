@@ -2,6 +2,38 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Activity, Users } from 'lucide-react';
 
+const SlaTimer = ({ deadline, status }) => {
+  const [timeLeft, setTimeLeft] = useState('');
+  const [isBreached, setIsBreached] = useState(false);
+
+  useEffect(() => {
+    if (!deadline || status === 'completed') return;
+    const updateTimer = () => {
+      const diff = new Date(deadline) - new Date();
+      if (diff <= 0) {
+        setIsBreached(true);
+        setTimeLeft('Breached');
+      } else {
+        const m = Math.floor(diff / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        setTimeLeft(`${m}m ${s}s`);
+        setIsBreached(false);
+      }
+    };
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [deadline, status]);
+
+  if (!deadline || status === 'completed') return null;
+
+  return (
+    <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: isBreached ? '#ef4444' : '#10b981', marginTop: '6px', background: isBreached ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '4px', display: 'inline-block' }}>
+      ⏳ {timeLeft}
+    </div>
+  );
+};
+
 export default function Dashboard() {
   const [tasks, setTasks] = useState([]);
   const [workers, setWorkers] = useState([]);
@@ -69,8 +101,10 @@ export default function Dashboard() {
             {tasks.map(task => (
               <div key={task.id} className="task-item">
                 <div className="task-info">
-                  <h3>{task.customer_name}</h3>
-                  <p>{task.description}</p>
+                  <h3>{task.customer_name} <span style={{color: '#94a3b8', fontSize: '0.9rem', fontWeight: 'normal'}}>• {task.location || 'No Location'}</span></h3>
+                  <p style={{marginBottom: '4px'}}>{task.description}</p>
+                  <p style={{fontSize: '0.8rem', color: '#60a5fa', margin: 0}}>{task.category} • Priority: {task.priority}</p>
+                  <SlaTimer deadline={task.sla_deadline} status={task.status} />
                 </div>
                 <div className={`badge ${task.status}`}>
                   {task.status}
@@ -96,6 +130,7 @@ export default function Dashboard() {
                 </div>
                 <div style={{ flex: 1 }}>
                   <strong style={{ display: 'block', margin: 0 }}>{worker.name}</strong>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{worker.role || 'Staff'}</span>
                 </div>
                 <div className={`worker-status ${worker.status}`} title={worker.status} />
               </div>

@@ -3,11 +3,45 @@ import { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Alert } from 'react-native';
 import { supabase } from './src/lib/supabase';
 
+const SlaTimer = ({ deadline }) => {
+  const [timeLeft, setTimeLeft] = useState('');
+  const [isBreached, setIsBreached] = useState(false);
+
+  useEffect(() => {
+    if (!deadline) return;
+    const updateTimer = () => {
+      const diff = new Date(deadline) - new Date();
+      if (diff <= 0) {
+        setIsBreached(true);
+        setTimeLeft('SLA Breached');
+      } else {
+        const m = Math.floor(diff / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        setTimeLeft(`${m}m ${s}s left`);
+        setIsBreached(false);
+      }
+    };
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [deadline]);
+
+  if (!deadline) return null;
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: isBreached ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', alignSelf: 'flex-start', borderRadius: 8 }}>
+      <Text style={{ color: isBreached ? '#ef4444' : '#10b981', fontWeight: 'bold' }}>
+        ⏳ {timeLeft}
+      </Text>
+    </View>
+  );
+};
+
 export default function App() {
   const [worker, setWorker] = useState(null);
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [nameInput, setNameInput] = useState('');
+  const [roleInput, setRoleInput] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -17,12 +51,13 @@ export default function App() {
     if (!emailInput.trim() || !passwordInput.trim()) return;
     setLoading(true);
     try {
-      if (isSignUp) {
-        if (!nameInput.trim()) throw new Error("Name is required");
-        const { data, error } = await supabase.auth.signUp({ email: emailInput.trim(), password: passwordInput.trim() });
-        if (error) throw error;
-        const { data: created } = await supabase.from('workers').insert([{ name: nameInput.trim(), email: emailInput.trim(), status: 'online' }]).select().single();
-        setWorker(created);
+        if (isSignUp) {
+          if (!nameInput.trim()) throw new Error("Name is required");
+          if (!roleInput.trim()) throw new Error("Role is required");
+          const { data, error } = await supabase.auth.signUp({ email: emailInput.trim(), password: passwordInput.trim() });
+          if (error) throw error;
+          const { data: created } = await supabase.from('workers').insert([{ name: nameInput.trim(), email: emailInput.trim(), role: roleInput.trim(), status: 'online' }]).select().single();
+          setWorker(created);
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({ email: emailInput.trim(), password: passwordInput.trim() });
         if (error) throw error;
@@ -144,7 +179,10 @@ export default function App() {
           <Text style={styles.subtitle}>{isSignUp ? 'Create your staff account' : 'Sign in to your account'}</Text>
           
           {isSignUp && (
-            <TextInput style={styles.input} value={nameInput} onChangeText={setNameInput} placeholder="Your Name" placeholderTextColor="#64748b" />
+            <>
+              <TextInput style={styles.input} value={nameInput} onChangeText={setNameInput} placeholder="Your Name" placeholderTextColor="#64748b" />
+              <TextInput style={styles.input} value={roleInput} onChangeText={setRoleInput} placeholder="Role (e.g. Housekeeping)" placeholderTextColor="#64748b" />
+            </>
           )}
 
           <TextInput style={styles.input} value={emailInput} onChangeText={setEmailInput} placeholder="Email Address" placeholderTextColor="#64748b" autoCapitalize="none" keyboardType="email-address" />
@@ -183,10 +221,14 @@ export default function App() {
         {tasks.map(task => (
           <View key={task.id} style={[styles.card, task.status === 'accepted' ? styles.cardAccepted : {}]}>
             <View style={styles.cardHeader}>
-              <Text style={styles.customerName}>{task.customer_name}</Text>
+              <View style={{flex: 1, paddingRight: 10}}>
+                <Text style={styles.customerName}>{task.customer_name} • {task.location || 'No Location'}</Text>
+                <Text style={{color: '#94a3b8', fontSize: 13, marginTop: 4}}>{task.category} • Priority: {task.priority}</Text>
+              </View>
               <Text style={[styles.badge, styles[`badge_${task.status}`]]}>{task.status.toUpperCase()}</Text>
             </View>
             <Text style={styles.taskDesc}>{task.description}</Text>
+            {task.status !== 'completed' && <SlaTimer deadline={task.sla_deadline} />}
             
             <View style={styles.actions}>
               {task.status === 'pending' && (

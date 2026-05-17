@@ -11,6 +11,7 @@ export default function App() {
     { role: 'assistant', content: 'Hello! I am your Smartry Assistant. How can I help you today?' }
   ]);
   const [inputText, setInputText] = useState('');
+  const [location, setLocation] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollViewRef = useRef();
 
@@ -47,7 +48,7 @@ export default function App() {
       const systemPrompt = {
         role: 'system',
         content: `You are a concise AI assistant at a hospitality venue serving guests via a tablet kiosk. 
-If the guest makes a request that staff should handle (e.g., "I need towels", "Bring a menu", "Maintenance issue"), you MUST include a JSON block in your response formatted EXACTLY like this: \`\`\`json\n{"task": "the detailed task for staff"}\n\`\`\`
+If the guest makes a request that staff should handle (e.g., "I need towels", "Bring a menu", "Maintenance issue"), you MUST include a JSON block in your response formatted EXACTLY like this: \`\`\`json\n{"task": "the detailed task for staff", "category": "Housekeeping|F&B|Maintenance|Front Desk", "priority": "low|normal|urgent"}\n\`\`\`
 Along with the JSON, politely confirm to the user that you are sending the request structure. Keep answers short.`
       };
 
@@ -76,8 +77,23 @@ Along with the JSON, politely confirm to the user that you are sending the reque
           try {
             const parsed = JSON.parse(jsonMatch[1] || jsonMatch[0]);
             if (parsed.task) {
+              const priority = parsed.priority || 'normal';
+              let slaMinutes = 30;
+              if (priority === 'urgent') slaMinutes = 15;
+              if (priority === 'low') slaMinutes = 60;
+              
+              const sla_deadline = new Date();
+              sla_deadline.setMinutes(sla_deadline.getMinutes() + slaMinutes);
+
               await supabase.from('tasks').insert([
-                { description: parsed.task, customer_name: 'Kiosk Station 1' }
+                { 
+                  description: parsed.task, 
+                  customer_name: location,
+                  location: location,
+                  category: parsed.category || 'General',
+                  priority: priority,
+                  sla_deadline: sla_deadline.toISOString()
+                }
               ]);
               assistantReply = assistantReply.replace(jsonMatch[0], '').trim();
               if (!assistantReply) assistantReply = "I have sent your request to our staff!";
@@ -96,6 +112,32 @@ Along with the JSON, politely confirm to the user that you are sending the reque
       setIsLoading(false);
     }
   };
+
+  if (!location) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+        <View style={styles.header}>
+          <Text style={styles.headerText}>Smartry AI Front Desk</Text>
+        </View>
+        <View style={{flex:1, justifyContent:'center', alignItems:'center', padding:24}}>
+          <Text style={{color:'#fafafa', fontSize:24, marginBottom:20, fontWeight:'600'}}>Where are you located?</Text>
+          <Text style={{color:'#94a3b8', fontSize:16, marginBottom:40, textAlign:'center'}}>Please enter your Room Number or Table Number so our staff can assist you.</Text>
+          <TextInput
+             style={[styles.input, {width: '100%', marginBottom: 20}]}
+             placeholder="e.g., Room 204 or Table 12"
+             placeholderTextColor="#9ca3af"
+             value={inputText}
+             onChangeText={setInputText}
+             onSubmitEditing={() => { if(inputText.trim()) { setLocation(inputText.trim()); setInputText(''); } }}
+          />
+          <TouchableOpacity style={[styles.sendButton, {width: '100%', paddingVertical: 18, alignItems:'center'}]} onPress={() => { if(inputText.trim()) { setLocation(inputText.trim()); setInputText(''); } }}>
+            <Text style={styles.sendButtonText}>Continue</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
