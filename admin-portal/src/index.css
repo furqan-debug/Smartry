@@ -57,6 +57,80 @@ body {
   gap: 2rem;
 }
 
+.panel-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.summary-card {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 1rem 1.25rem;
+  border-radius: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text-main);
+}
+
+.summary-card span {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.summary-card strong {
+  font-size: 1.3rem;
+}
+
+.panel-toolbar {
+  display: grid;
+  grid-template-columns: 1.8fr 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.panel-toolbar input,
+.panel-toolbar select {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-main);
+  outline: none;
+}
+
+.panel-toolbar input:focus,
+.panel-toolbar select:focus {
+  border-color: rgba(59, 130, 246, 0.7);
+}
+
+.task-item select,
+.task-item button {
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+}
+
+.task-item select {
+  min-width: 180px;
+  padding: 0.65rem 0.8rem;
+}
+
+.task-item button {
+  padding: 0.65rem 0.85rem;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.task-item button:hover {
+  transform: translateY(-1px);
+  background: rgba(16, 185, 129, 0.18);
+}
+
 .panel {
   background: var(--bg-card);
   backdrop-filter: blur(20px);

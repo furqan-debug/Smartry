@@ -3,6 +3,8 @@ import { useState, useRef, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, SafeAreaView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { supabase } from './src/lib/supabase';
 
+const isSupabaseMissing = !process.env.EXPO_PUBLIC_SUPABASE_URL || !process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
 // OpenRouter Key from env
 const OPENROUTER_KEY = process.env.EXPO_PUBLIC_OPENROUTER_KEY;
 
@@ -145,7 +147,12 @@ Along with the JSON, politely confirm to the user that you are sending the reque
       <View style={styles.header}>
         <Text style={styles.headerText}>Smartry AI Front Desk</Text>
       </View>
-      
+      {isSupabaseMissing && (
+        <View style={styles.configWarning}>
+          <Text style={styles.configWarningTitle}>Configuration required</Text>
+          <Text style={styles.configWarningText}>Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in client-kiosk/.env or Expo environment variables.</Text>
+        </View>
+      )}
       <KeyboardAvoidingView 
         style={styles.keyboardView} 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -204,4 +211,7 @@ const styles = StyleSheet.create({
   input: { flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', color: '#fafafa', paddingHorizontal: 24, paddingVertical: 18, borderRadius: 30, fontSize: 18, marginRight: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   sendButton: { backgroundColor: '#d97706', justifyContent: 'center', paddingHorizontal: 30, borderRadius: 30, shadowColor: '#d97706', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
   sendButtonText: { color: '#ffffff', fontWeight: '600', fontSize: 16, textTransform: 'uppercase', letterSpacing: 1 },
+  configWarning: { backgroundColor: 'rgba(248, 113, 113, 0.12)', borderRadius: 16, padding: 16, margin: 16 },
+  configWarningTitle: { color: '#fee2e2', fontWeight: '700', marginBottom: 6 },
+  configWarningText: { color: '#f8d7da', fontSize: 14, lineHeight: 20 },
 });

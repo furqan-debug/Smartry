@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Alert } from 'react-native';
 import { supabase } from './src/lib/supabase';
 
+const isSupabaseMissing = !process.env.EXPO_PUBLIC_SUPABASE_URL || !process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
 const SlaTimer = ({ deadline }) => {
   const [timeLeft, setTimeLeft] = useState('');
   const [isBreached, setIsBreached] = useState(false);
@@ -45,6 +47,9 @@ export default function App() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  const pendingTasks = tasks.filter(task => task.status === 'pending').length;
+  const acceptedTasks = tasks.filter(task => task.status === 'accepted' && task.worker_id === worker?.id).length;
 
   // Auth handler
   const handleAuth = async () => {
@@ -178,7 +183,12 @@ export default function App() {
         <View style={styles.loginCenter}>
           <Text style={styles.title}>Smartry Staff</Text>
           <Text style={styles.subtitle}>{isSignUp ? 'Create your staff account' : 'Sign in to your account'}</Text>
-          
+          {isSupabaseMissing && (
+            <View style={styles.configWarning}>
+              <Text style={styles.configWarningTitle}>Configuration required</Text>
+              <Text style={styles.configWarningText}>Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in worker-app/.env or Expo environment variables.</Text>
+            </View>
+          )}
           {isSignUp && (
             <>
               <TextInput style={styles.input} value={nameInput} onChangeText={setNameInput} placeholder="Your Name" placeholderTextColor="#64748b" />
@@ -212,6 +222,17 @@ export default function App() {
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Text style={styles.logoutText}>Sign Out</Text>
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.metricsRow}>
+        <View style={styles.metricCard}>
+          <Text style={styles.metricLabel}>Pending</Text>
+          <Text style={styles.metricValue}>{pendingTasks}</Text>
+        </View>
+        <View style={styles.metricCard}>
+          <Text style={styles.metricLabel}>Accepted</Text>
+          <Text style={styles.metricValue}>{acceptedTasks}</Text>
+        </View>
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
@@ -285,4 +306,11 @@ const styles = StyleSheet.create({
   btnComplete: { backgroundColor: '#10b981' },
   btnReject: { backgroundColor: '#1e293b', flex: 0.5 },
   actionText: { fontWeight: '700', color: '#ffffff', fontSize: 16 },
+  metricsRow: { flexDirection: 'row', gap: 12, marginHorizontal: 20, marginBottom: 16 },
+  metricCard: { flex: 1, padding: 18, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: '#1e293b' },
+  metricLabel: { color: '#94a3b8', marginBottom: 6, fontSize: 12, textTransform: 'uppercase', letterSpacing: 1.2 },
+  metricValue: { color: '#f8fafc', fontSize: 28, fontWeight: '800' },
+  configWarning: { backgroundColor: 'rgba(248, 113, 113, 0.12)', borderColor: 'rgba(248, 113, 113, 0.25)', borderWidth: 1, padding: 14, borderRadius: 14, marginBottom: 20 },
+  configWarningTitle: { color: '#fee2e2', fontWeight: '700', marginBottom: 6 },
+  configWarningText: { color: '#f8d7da', fontSize: 13, lineHeight: 18 },
 });

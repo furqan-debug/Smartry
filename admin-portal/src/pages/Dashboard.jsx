@@ -37,6 +37,9 @@ const SlaTimer = ({ deadline, status }) => {
 export default function Dashboard() {
   const [tasks, setTasks] = useState([]);
   const [workers, setWorkers] = useState([]);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     // Fetch initial data
@@ -81,6 +84,34 @@ export default function Dashboard() {
     };
   }, []);
 
+  const filteredTasks = tasks.filter(t => {
+    if (statusFilter !== 'all' && t.status !== statusFilter) return false;
+    if (priorityFilter !== 'all' && t.priority !== priorityFilter) return false;
+    if (search && !(`${t.description} ${t.customer_name} ${t.location}`.toLowerCase().includes(search.toLowerCase()))) return false;
+    return true;
+  });
+
+  const pendingCount = tasks.filter(task => task.status === 'pending').length;
+  const acceptedCount = tasks.filter(task => task.status === 'accepted').length;
+  const completedCount = tasks.filter(task => task.status === 'completed').length;
+
+  const assignTask = async (taskId, workerId) => {
+    if (!workerId) return;
+    try {
+      await supabase.from('tasks').update({ worker_id: workerId, status: 'accepted' }).eq('id', taskId);
+    } catch (e) {
+      console.error('Assign error', e);
+    }
+  };
+
+  const markCompleted = async (taskId) => {
+    try {
+      await supabase.from('tasks').update({ status: 'completed' }).eq('id', taskId);
+    } catch (e) {
+      console.error('Complete error', e);
+    }
+  };
+
   return (
     <div className="dashboard-container">
       <header className="header">
@@ -90,6 +121,35 @@ export default function Dashboard() {
       
       <main className="main-content">
         <section className="panel">
+          <div className="panel-summary">
+            <div className="summary-card">
+              <span>Pending</span>
+              <strong>{pendingCount}</strong>
+            </div>
+            <div className="summary-card">
+              <span>Accepted</span>
+              <strong>{acceptedCount}</strong>
+            </div>
+            <div className="summary-card">
+              <span>Completed</span>
+              <strong>{completedCount}</strong>
+            </div>
+          </div>
+          <div className="panel-toolbar">
+            <input placeholder="Search requests" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="all">All statuses</option>
+              <option value="pending">Pending</option>
+              <option value="accepted">Accepted</option>
+              <option value="completed">Completed</option>
+            </select>
+            <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
+              <option value="all">All priorities</option>
+              <option value="low">Low</option>
+              <option value="normal">Normal</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
           <div className="panel-header">
             <Activity size={24} style={{ color: '#3b82f6' }} />
             <h2 style={{ margin: 0 }}>Live Requests</h2>
@@ -98,7 +158,10 @@ export default function Dashboard() {
             {tasks.length === 0 ? (
               <p style={{ color: 'var(--text-muted)' }}>No active requests.</p>
             ) : null}
-            {tasks.map(task => (
+            {filteredTasks.length === 0 && tasks.length > 0 ? (
+              <p style={{ color: 'var(--text-muted)' }}>No requests match the current filters.</p>
+            ) : null}
+            {filteredTasks.map(task => (
               <div key={task.id} className="task-item">
                 <div className="task-info">
                   <h3>{task.customer_name} <span style={{color: '#94a3b8', fontSize: '0.9rem', fontWeight: 'normal'}}>• {task.location || 'No Location'}</span></h3>
@@ -106,8 +169,21 @@ export default function Dashboard() {
                   <p style={{fontSize: '0.8rem', color: '#60a5fa', margin: 0}}>{task.category} • Priority: {task.priority}</p>
                   <SlaTimer deadline={task.sla_deadline} status={task.status} />
                 </div>
-                <div className={`badge ${task.status}`}>
-                  {task.status}
+                <div style={{display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end', minWidth: 220}}>
+                  <div className={`badge ${task.status}`}>
+                    {task.status}
+                  </div>
+                  <div style={{display: 'flex', gap: 8, alignItems: 'center'}}>
+                    <select value={task.worker_id || ''} onChange={(e) => assignTask(task.id, e.target.value)}>
+                      <option value="">Assign to...</option>
+                      {workers.map(w => (
+                        <option key={w.id} value={w.id}>{w.name} ({w.role || 'Staff'})</option>
+                      ))}
+                    </select>
+                    {task.status !== 'completed' && (
+                      <button onClick={() => markCompleted(task.id)}>Complete</button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
